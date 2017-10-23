@@ -2,7 +2,6 @@ package cm.aptoide.pt.social;
 
 import cm.aptoide.accountmanager.AptoideAccountManager;
 import cm.aptoide.pt.notification.AptoideNotification;
-import cm.aptoide.pt.notification.NotificationCenter;
 import cm.aptoide.pt.social.data.User;
 import rx.Completable;
 import rx.Observable;

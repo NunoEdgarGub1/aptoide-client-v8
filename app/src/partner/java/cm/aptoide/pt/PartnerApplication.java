@@ -1,30 +1,16 @@
 package cm.aptoide.pt;
 
-import android.app.NotificationManager;
-import android.content.Context;
 import android.os.Environment;
 import cm.aptoide.pt.account.LoginPreferences;
-import cm.aptoide.pt.crashreports.CrashReport;
-import cm.aptoide.pt.database.AccessorFactory;
-import cm.aptoide.pt.database.accessors.NotificationAccessor;
-import cm.aptoide.pt.database.realm.Notification;
 import cm.aptoide.pt.notification.NotificationCenter;
-import cm.aptoide.pt.notification.NotificationIdsMapper;
-import cm.aptoide.pt.notification.NotificationPolicyFactory;
-import cm.aptoide.pt.notification.NotificationProvider;
 import cm.aptoide.pt.notification.NotificationSyncScheduler;
-import cm.aptoide.pt.notification.NotificationsCleaner;
 import cm.aptoide.pt.notification.PushNotificationSyncManager;
-import cm.aptoide.pt.notification.SystemNotificationShower;
 import cm.aptoide.pt.notification.sync.NotificationSyncFactory;
-import cm.aptoide.pt.notification.sync.NotificationSyncManager;
 import cm.aptoide.pt.remotebootconfig.BootConfigJSONUtils;
 import cm.aptoide.pt.remotebootconfig.datamodel.BootConfig;
 import cm.aptoide.pt.remotebootconfig.datamodel.RemoteBootConfig;
 import cm.aptoide.pt.view.configuration.FragmentProvider;
 import cm.aptoide.pt.view.configuration.implementation.PartnerFragmentProvider;
-import java.util.Calendar;
-import java.util.TimeZone;
 import rx.Completable;
 
 public class PartnerApplication extends AptoideApplication {

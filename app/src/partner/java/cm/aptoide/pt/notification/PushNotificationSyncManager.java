@@ -22,20 +22,20 @@ public class PushNotificationSyncManager implements NotificationSyncScheduler{
 
   @Override public void schedule() {
     if (enabled) {
-      //syncScheduler.schedule(notificationSyncFactory.create(
-      //    NotificationSyncFactory.PUSH_NOTIFICATION_SYNC_PERIODIC));
+      syncScheduler.schedule(notificationSyncFactory.create(
+          NotificationSyncFactory.PUSH_NOTIFICATION_SYNC_PERIODIC));
     }
   }
 
   @Override public void forceSync() {
     if (enabled) {
-      //syncScheduler.schedule(notificationSyncFactory.create(
-      //    NotificationSyncFactory.PUSH_NOTIFICATION_SYNC_IMMEDIATE));
+      syncScheduler.schedule(notificationSyncFactory.create(
+          NotificationSyncFactory.PUSH_NOTIFICATION_SYNC_IMMEDIATE));
     }
   }
 
   @Override public void removeSchedules() {
-    //syncScheduler.cancel(NotificationSyncFactory.PUSH_NOTIFICATION_SYNC_PERIODIC);
+    syncScheduler.cancel(NotificationSyncFactory.PUSH_NOTIFICATION_SYNC_PERIODIC);
   }
 
   @Override public void setEnabled(boolean enabled) {

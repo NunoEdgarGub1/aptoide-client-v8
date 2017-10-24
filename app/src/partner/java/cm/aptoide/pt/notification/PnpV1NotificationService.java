@@ -84,7 +84,8 @@ public class PnpV1NotificationService implements NotificationService {
       GetPushNotificationsResponse response) {
     List<AptoideNotification> aptoideNotifications = new LinkedList<>();
     //for (final GetPushNotificationsResponse.Notification pushNotification : response.getResults()) {
-    //  aptoideNotifications.add(new AptoideNotification(body, img, pushNotification.getTitle(),
+    //  aptoideNotifications.add(new AptoideNotification(body,
+    //      pushNotification.getImages().getIconUrl(), pushNotification.getTitle(),
     //      pushNotification.getTargetUrl(), type, timeStamp, appName, graphic, dismissed, ownerId,
     //      expireSecsUtc, pushNotification.getTrackUrl(), notificationCenterUrlTrack, processed));
     //}

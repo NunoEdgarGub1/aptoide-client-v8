@@ -49,9 +49,11 @@ public class NotificationSyncFactory {
         return new CampaignNotificationSync(type, notificationService, notificationPersistence,
             false, false, 0, 0);
       case PUSH_NOTIFICATION_SYNC_IMMEDIATE:
-        return new PushNotificationSync();
+        return new PushNotificationSync(type, notificationService, notificationPersistence,
+            false, false, 0, 0);
       case PUSH_NOTIFICATION_SYNC_PERIODIC:
-        return new PushNotificationSync();
+        return new PushNotificationSync(type, notificationService, notificationPersistence,
+            false, false, 0, 0);
       default:
         throw new IllegalArgumentException("Invalid sync " + type);
     }

@@ -20,7 +20,7 @@ public class PushNotificationSync extends Sync {
   }
 
   @Override public Completable execute() {
-    return networkService.getSocialNotifications()
+    return networkService.getPushNotifications()
         .flatMapCompletable(aptoideNotification -> provider.save(aptoideNotification));
   }
 }

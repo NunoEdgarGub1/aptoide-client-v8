@@ -2,8 +2,11 @@ package cm.aptoide.pt;
 
 import android.os.Environment;
 import cm.aptoide.pt.account.LoginPreferences;
+import cm.aptoide.pt.dataprovider.WebService;
 import cm.aptoide.pt.notification.NotificationCenter;
+import cm.aptoide.pt.notification.NotificationService;
 import cm.aptoide.pt.notification.NotificationSyncScheduler;
+import cm.aptoide.pt.notification.PnpV1NotificationService;
 import cm.aptoide.pt.notification.PushNotificationSyncManager;
 import cm.aptoide.pt.notification.sync.NotificationSyncFactory;
 import cm.aptoide.pt.remotebootconfig.BootConfigJSONUtils;
@@ -19,6 +22,7 @@ public class PartnerApplication extends AptoideApplication {
   private BootConfig bootConfig;
   private NotificationCenter notificationCenter;
   private PushNotificationSyncManager pushNotificationSyncManager;
+  private NotificationService pnpV1NotificationService;
 
   public BootConfig getBootConfig() {
     return getApplicationPreferences().getBootConfig();
@@ -69,5 +73,18 @@ public class PartnerApplication extends AptoideApplication {
               getNotificationProvider()));
     }
     return pushNotificationSyncManager;
+  }
+
+  @Override public NotificationService getPnpV1NotificationService() {
+    if (pnpV1NotificationService == null) {
+      final ApplicationPreferences appPreferences = getApplicationPreferences();
+      pnpV1NotificationService =
+          new PnpV1NotificationService(BuildConfig.APPLICATION_ID, getDefaultClient(),
+              WebService.getDefaultConverter(), getIdsRepository(), BuildConfig.VERSION_NAME,
+              appPreferences.getExtraId(), getDefaultSharedPreferences(), getResources(),
+              getAuthenticationPersistence(), getAccountManager(), getBaseContext(),
+              getTokenInvalidator(), getBodyInterceptorV3());
+    }
+    return pnpV1NotificationService;
   }
 }

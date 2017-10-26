@@ -4,17 +4,28 @@ package cm.aptoide.pt.notification;
  * Created by danielchen on 23/10/2017.
  */
 
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
+import android.os.Build;
+import android.text.TextUtils;
+import android.widget.RemoteViews;
 import cm.aptoide.accountmanager.AptoideAccountManager;
-import cm.aptoide.pt.database.realm.Notification;
+import cm.aptoide.pt.AptoideApplication;
+import cm.aptoide.pt.PartnerApplication;
+import cm.aptoide.pt.R;
+import cm.aptoide.pt.dataprovider.interfaces.TokenInvalidator;
 import cm.aptoide.pt.dataprovider.model.v1.GetPullNotificationsResponse;
+import cm.aptoide.pt.dataprovider.ws.BodyInterceptor;
 import cm.aptoide.pt.dataprovider.ws.v1.notification.PullCampaignNotificationsRequest;
 import cm.aptoide.pt.dataprovider.ws.v1.notification.PullSocialNotificationRequest;
+import cm.aptoide.pt.dataprovider.ws.v3.BaseBody;
 import cm.aptoide.pt.dataprovider.ws.v3.GetPushNotificationsResponse;
 import cm.aptoide.pt.dataprovider.ws.v3.PushNotificationsRequest;
 import cm.aptoide.pt.networking.AuthenticationPersistence;
+import cm.aptoide.pt.networking.BodyInterceptorV3;
 import cm.aptoide.pt.networking.IdsRepository;
+import cm.aptoide.pt.preferences.managed.ManagerPreferences;
 import java.util.LinkedList;
 import java.util.List;
 import okhttp3.OkHttpClient;
@@ -32,6 +43,29 @@ public class PnpV1NotificationService implements NotificationService {
   private final String extraId;
   private final SharedPreferences sharedPreferences;
   private final Resources resources;
+  private Context context;
+  private TokenInvalidator tokenInvalidator;
+  private BodyInterceptor<BaseBody> bodyInterceptor;
+
+  public PnpV1NotificationService(String applicationId, OkHttpClient httpClient,
+      Converter.Factory converterFactory, IdsRepository idsRepository, String versionName,
+      String extraId, SharedPreferences sharedPreferences, Resources resources,
+      AuthenticationPersistence authenticationPersistence, AptoideAccountManager accountManager,
+      Context context, TokenInvalidator tokenInvalidator, BodyInterceptor<BaseBody> bodyInterceptor) {
+    this.applicationId = applicationId;
+    this.httpClient = httpClient;
+    this.converterFactory = converterFactory;
+    this.idsRepository = idsRepository;
+    this.versionName = versionName;
+    this.authenticationPersistence = authenticationPersistence;
+    this.extraId = extraId;
+    this.sharedPreferences = sharedPreferences;
+    this.resources = resources;
+    this.accountManager = accountManager;
+    this.context = context;
+    this.tokenInvalidator = tokenInvalidator;
+    this.bodyInterceptor = bodyInterceptor;
+  }
 
   public PnpV1NotificationService(String applicationId, OkHttpClient httpClient,
       Converter.Factory converterFactory, IdsRepository idsRepository, String versionName,
@@ -74,21 +108,21 @@ public class PnpV1NotificationService implements NotificationService {
   }
 
   @Override public Single<List<AptoideNotification>> getPushNotifications() {
-    //PushNotificationsRequest.of(sharedPreferences, resources,
-    //    ((PartnerApplication) getApplicationContext()).getPartnerId(), extraId,
-    //    ((AptoideApplication) getApplicationContext()).getTokenInvalidator())
-    //    .execute(response -> convertPushNotifications(response));
+    return PushNotificationsRequest.of(sharedPreferences, resources,
+        context, extraId, bodyInterceptor, tokenInvalidator)
+        .observe().map(response -> convertPushNotifications(response)).toSingle();
   }
 
   private List<AptoideNotification> convertPushNotifications(
       GetPushNotificationsResponse response) {
     List<AptoideNotification> aptoideNotifications = new LinkedList<>();
-    //for (final GetPushNotificationsResponse.Notification pushNotification : response.getResults()) {
-    //  aptoideNotifications.add(new AptoideNotification(body,
-    //      pushNotification.getImages().getIconUrl(), pushNotification.getTitle(),
-    //      pushNotification.getTargetUrl(), type, timeStamp, appName, graphic, dismissed, ownerId,
-    //      expireSecsUtc, pushNotification.getTrackUrl(), notificationCenterUrlTrack, processed));
-    //}
+    for (final GetPushNotificationsResponse.Notification pushNotification : response.getResults()) {
+      ManagerPreferences.setLastPushNotificationId(pushNotification.getId().intValue(),
+          sharedPreferences);
+      aptoideNotifications.add(new AptoideNotification(pushNotification.getImages().getIconUrl(),
+          pushNotification.getTitle(), pushNotification.getTargetUrl(),
+          pushNotification.getTrackUrl(), pushNotification.getImages().getBannerUrl()));
+    }
     return aptoideNotifications;
   }
 

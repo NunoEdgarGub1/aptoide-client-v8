@@ -42,6 +42,7 @@ import cm.aptoide.pt.install.InstallerFactory;
 import cm.aptoide.pt.link.LinksHandlerFactory;
 import cm.aptoide.pt.logger.Logger;
 import cm.aptoide.pt.notification.NotificationAnalytics;
+import cm.aptoide.pt.notification.NotificationCenter;
 import cm.aptoide.pt.repository.RepositoryFactory;
 import cm.aptoide.pt.social.AccountNotificationManagerUserProvider;
 import cm.aptoide.pt.social.StatsUserProvider;

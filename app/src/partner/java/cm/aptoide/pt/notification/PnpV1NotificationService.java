@@ -51,7 +51,8 @@ public class PnpV1NotificationService implements NotificationService {
       Converter.Factory converterFactory, IdsRepository idsRepository, String versionName,
       String extraId, SharedPreferences sharedPreferences, Resources resources,
       AuthenticationPersistence authenticationPersistence, AptoideAccountManager accountManager,
-      Context context, TokenInvalidator tokenInvalidator, BodyInterceptor<BaseBody> bodyInterceptor) {
+      Context context, TokenInvalidator tokenInvalidator,
+      BodyInterceptor<BaseBody> bodyInterceptor) {
     this.applicationId = applicationId;
     this.httpClient = httpClient;
     this.converterFactory = converterFactory;
@@ -108,6 +109,16 @@ public class PnpV1NotificationService implements NotificationService {
   }
 
   @Override public Single<List<AptoideNotification>> getPushNotifications() {
+    //return authenticationPersistence.getAuthentication()
+    //    .flatMapObservable(
+    //        authentication -> PushNotificationsRequest.of(sharedPreferences, resources, context,
+    //            extraId, bodyInterceptor, tokenInvalidator)
+    //            .observe())
+    //    .flatMap(response -> accountManager.accountStatus()
+    //        .first()
+    //        .map(account -> convertPushNotifications(response)))
+    //    .toSingle();
+
     return PushNotificationsRequest.of(sharedPreferences, resources,
         context, extraId, bodyInterceptor, tokenInvalidator)
         .observe().map(response -> convertPushNotifications(response)).toSingle();
@@ -117,11 +128,12 @@ public class PnpV1NotificationService implements NotificationService {
       GetPushNotificationsResponse response) {
     List<AptoideNotification> aptoideNotifications = new LinkedList<>();
     for (final GetPushNotificationsResponse.Notification pushNotification : response.getResults()) {
-      ManagerPreferences.setLastPushNotificationId(pushNotification.getId().intValue(),
-          sharedPreferences);
-      aptoideNotifications.add(new AptoideNotification(pushNotification.getImages().getIconUrl(),
-          pushNotification.getTitle(), pushNotification.getTargetUrl(),
-          pushNotification.getTrackUrl(), pushNotification.getImages().getBannerUrl()));
+      ManagerPreferences.setLastPushNotificationId(pushNotification.getId()
+          .intValue(), sharedPreferences);
+      aptoideNotifications.add(new AptoideNotification(pushNotification.getImages()
+          .getIconUrl(), pushNotification.getTitle(), pushNotification.getTargetUrl(),
+          pushNotification.getTrackUrl(), pushNotification.getImages()
+          .getBannerUrl()));
     }
     return aptoideNotifications;
   }

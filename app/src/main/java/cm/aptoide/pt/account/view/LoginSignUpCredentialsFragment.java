@@ -15,7 +15,6 @@ import android.widget.EditText;
 import android.widget.TextView;
 import cm.aptoide.accountmanager.AptoideAccountManager;
 import cm.aptoide.accountmanager.AptoideCredentials;
-import cm.aptoide.pt.ApplicationPreferences;
 import cm.aptoide.pt.AptoideApplication;
 import cm.aptoide.pt.R;
 import cm.aptoide.pt.analytics.Analytics;
@@ -25,8 +24,8 @@ import cm.aptoide.pt.presenter.LoginSignUpCredentialsPresenter;
 import cm.aptoide.pt.presenter.LoginSignUpCredentialsView;
 import cm.aptoide.pt.utils.GenericDialogs;
 import cm.aptoide.pt.view.ThrowableToStringMapper;
-import cm.aptoide.pt.view.navigator.ActivityResultNavigator;
-import cm.aptoide.pt.view.orientation.ScreenOrientationManager;
+import cm.aptoide.pt.navigator.ActivityResultNavigator;
+import cm.aptoide.pt.orientation.ScreenOrientationManager;
 import cm.aptoide.pt.view.rx.RxAlertDialog;
 import com.jakewharton.rxbinding.view.RxView;
 import java.util.Arrays;
@@ -71,7 +70,7 @@ public class LoginSignUpCredentialsFragment extends GooglePlayServicesFragment
   private CrashReport crashReport;
   private AccountNavigator accountNavigator;
   private ScreenOrientationManager orientationManager;
-  private ApplicationPreferences appPreferences;
+  private String marketName;
 
   public static LoginSignUpCredentialsFragment newInstance(boolean dismissToNavigateToMainView,
       boolean cleanBackStack) {
@@ -88,7 +87,7 @@ public class LoginSignUpCredentialsFragment extends GooglePlayServicesFragment
   @Override public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
-    appPreferences = ((AptoideApplication) getApplicationContext()).getApplicationPreferences();
+    marketName = ((AptoideApplication) getApplicationContext()).getMarketName();
     errorMapper = new AccountErrorMapper(getContext());
     accountManager =
         ((AptoideApplication) getContext().getApplicationContext()).getAccountManager();
@@ -102,14 +101,6 @@ public class LoginSignUpCredentialsFragment extends GooglePlayServicesFragment
   @Override public ScreenTagHistory getHistoryTracker() {
     return ScreenTagHistory.Builder.build(this.getClass()
         .getSimpleName());
-  }
-
-  @Override public void onSaveInstanceState(Bundle outState) {
-    super.onSaveInstanceState(outState);
-    outState.putString(USERNAME_KEY, aptoideEmailEditText.getText()
-        .toString());
-    outState.putString(PASSWORD_KEY, aptoidePasswordEditText.getText()
-        .toString());
   }
 
   @Override public void hideKeyboard() {
@@ -130,6 +121,14 @@ public class LoginSignUpCredentialsFragment extends GooglePlayServicesFragment
       aptoideEmailEditText.setText(savedInstanceState.getString(USERNAME_KEY, ""));
       aptoidePasswordEditText.setText(savedInstanceState.getString(PASSWORD_KEY, ""));
     }
+  }
+
+  @Override public void onSaveInstanceState(Bundle outState) {
+    super.onSaveInstanceState(outState);
+    outState.putString(USERNAME_KEY, aptoideEmailEditText.getText()
+        .toString());
+    outState.putString(PASSWORD_KEY, aptoidePasswordEditText.getText()
+        .toString());
   }
 
   @Override public Observable<Void> showAptoideLoginAreaClick() {
@@ -309,8 +308,7 @@ public class LoginSignUpCredentialsFragment extends GooglePlayServicesFragment
 
     buttonLogin = (Button) view.findViewById(R.id.button_login);
     buttonSignUp = (Button) view.findViewById(R.id.button_sign_up);
-    buttonSignUp.setText(
-        String.format(getString(R.string.join_company), appPreferences.getMarketName()));
+    buttonSignUp.setText(String.format(getString(R.string.join_company), marketName));
 
     aptoideEmailEditText = (EditText) view.findViewById(R.id.username);
     aptoidePasswordEditText = (EditText) view.findViewById(R.id.password);
@@ -322,8 +320,7 @@ public class LoginSignUpCredentialsFragment extends GooglePlayServicesFragment
     credentialsEditTextsArea = view.findViewById(R.id.credentials_edit_texts);
     signUpSelectionButton = (Button) view.findViewById(R.id.show_join_aptoide_area);
     loginSelectionButton = (Button) view.findViewById(R.id.show_login_with_aptoide_area);
-    signUpSelectionButton.setText(
-        String.format(getString(R.string.join_company), appPreferences.getMarketName()));
+    signUpSelectionButton.setText(String.format(getString(R.string.join_company), marketName));
     loginArea = view.findViewById(R.id.login_button_area);
     signUpArea = view.findViewById(R.id.sign_up_button_area);
     termsAndConditions = (TextView) view.findViewById(R.id.terms_and_conditions);
@@ -349,7 +346,7 @@ public class LoginSignUpCredentialsFragment extends GooglePlayServicesFragment
         dismissToNavigateToMainView, navigateToHome, accountNavigator,
         Arrays.asList("email", "user_friends"), Arrays.asList("email"), errorMapper,
         ((AptoideApplication) getContext().getApplicationContext()).getAccountAnalytics());
-    attachPresenter(presenter, null);
+    attachPresenter(presenter);
     registerClickHandler(presenter);
   }
 

@@ -20,14 +20,13 @@ import android.view.ViewGroup;
 import android.widget.ProgressBar;
 import cm.aptoide.accountmanager.Account;
 import cm.aptoide.accountmanager.AptoideAccountManager;
-import cm.aptoide.pt.ApplicationPreferences;
 import cm.aptoide.pt.AptoideApplication;
 import cm.aptoide.pt.BuildConfig;
-import cm.aptoide.pt.InstallManager;
 import cm.aptoide.pt.R;
 import cm.aptoide.pt.actions.PermissionManager;
 import cm.aptoide.pt.actions.PermissionService;
 import cm.aptoide.pt.analytics.Analytics;
+import cm.aptoide.pt.comments.view.CommentDialogFragment;
 import cm.aptoide.pt.crashreports.CrashReport;
 import cm.aptoide.pt.database.AccessorFactory;
 import cm.aptoide.pt.database.accessors.StoreAccessor;
@@ -38,12 +37,15 @@ import cm.aptoide.pt.dataprovider.ws.BodyInterceptor;
 import cm.aptoide.pt.dataprovider.ws.v7.BaseBody;
 import cm.aptoide.pt.dataprovider.ws.v7.store.StoreContext;
 import cm.aptoide.pt.download.DownloadFactory;
+import cm.aptoide.pt.install.InstallManager;
 import cm.aptoide.pt.install.InstallerFactory;
 import cm.aptoide.pt.link.LinksHandlerFactory;
 import cm.aptoide.pt.logger.Logger;
+import cm.aptoide.pt.navigator.TabNavigator;
 import cm.aptoide.pt.notification.NotificationAnalytics;
 import cm.aptoide.pt.notification.NotificationCenter;
 import cm.aptoide.pt.repository.RepositoryFactory;
+import cm.aptoide.pt.repository.StoreRepository;
 import cm.aptoide.pt.social.AccountNotificationManagerUserProvider;
 import cm.aptoide.pt.social.StatsUserProvider;
 import cm.aptoide.pt.social.TimelineUserProvider;
@@ -60,6 +62,7 @@ import cm.aptoide.pt.social.data.TimelineAdsRepository;
 import cm.aptoide.pt.social.data.TimelinePostsRepository;
 import cm.aptoide.pt.social.data.TimelineResponseCardMapper;
 import cm.aptoide.pt.social.data.TimelineService;
+import cm.aptoide.pt.social.data.analytics.EventErrorHandler;
 import cm.aptoide.pt.social.data.share.ShareDialogFactory;
 import cm.aptoide.pt.social.data.share.ShareDialogInterface;
 import cm.aptoide.pt.social.data.share.ShareEvent;
@@ -69,15 +72,14 @@ import cm.aptoide.pt.social.presenter.TimelinePresenter;
 import cm.aptoide.pt.store.StoreCredentialsProviderImpl;
 import cm.aptoide.pt.store.StoreUtilsProxy;
 import cm.aptoide.pt.timeline.TimelineAnalytics;
+import cm.aptoide.pt.updates.UpdateRepository;
 import cm.aptoide.pt.util.DateCalculator;
 import cm.aptoide.pt.utils.AptoideUtils;
 import cm.aptoide.pt.utils.GenericDialogs;
 import cm.aptoide.pt.utils.design.ShowMessage;
-import cm.aptoide.pt.view.comments.CommentDialogFragment;
 import cm.aptoide.pt.view.fragment.FragmentView;
-import cm.aptoide.pt.view.navigator.TabNavigator;
 import cm.aptoide.pt.view.recycler.RecyclerViewPositionHelper;
-import cm.aptoide.pt.view.recycler.displayable.SpannableFactory;
+import cm.aptoide.pt.view.spannable.SpannableFactory;
 import com.facebook.appevents.AppEventsLogger;
 import com.jakewharton.rxbinding.support.v4.widget.RxSwipeRefreshLayout;
 import com.jakewharton.rxbinding.support.v7.widget.RxRecyclerView;
@@ -91,7 +93,9 @@ import okhttp3.OkHttpClient;
 import retrofit2.Converter;
 import rx.Completable;
 import rx.Observable;
+import rx.Single;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
 import rx.subjects.PublishSubject;
 
 /**
@@ -180,8 +184,7 @@ public class TimelineFragment extends FragmentView implements TimelineView {
     super.onCreate(savedInstanceState);
     final AptoideApplication application =
         (AptoideApplication) getContext().getApplicationContext();
-    final ApplicationPreferences appPreferences = application.getApplicationPreferences();
-    marketName = appPreferences.getMarketName();
+    marketName = application.getMarketName();
     userId = getArguments().containsKey(USER_ID_KEY) ? getArguments().getLong(USER_ID_KEY) : null;
     storeId = getArguments().containsKey(STORE_ID) ? getArguments().getLong(STORE_ID) : null;
     storeContext = (StoreContext) getArguments().getSerializable(STORE_CONTEXT);
@@ -209,12 +212,19 @@ public class TimelineFragment extends FragmentView implements TimelineView {
         AppEventsLogger.newLogger(getContext().getApplicationContext()), baseBodyInterceptorV7,
         defaultClient, defaultConverter, tokenInvalidator, BuildConfig.APPLICATION_ID,
         sharedPreferences, new NotificationAnalytics(defaultClient, Analytics.getInstance()),
-        application.getAptoideNavigationTracker());
+        application.getNavigationTracker());
 
     timelineService =
         new TimelineService(userId, baseBodyInterceptorV7, defaultClient, defaultConverter,
-            new TimelineResponseCardMapper(marketName), tokenInvalidator, sharedPreferences);
+            new TimelineResponseCardMapper(accountManager, marketName), tokenInvalidator,
+            sharedPreferences);
     crashReport = CrashReport.getInstance();
+  }
+
+  @Nullable @Override
+  public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container,
+      @Nullable Bundle savedInstanceState) {
+    return inflater.inflate(R.layout.fragment_timeline, container, false);
   }
 
   @Override public void onSaveInstanceState(Bundle outState) {
@@ -224,12 +234,6 @@ public class TimelineFragment extends FragmentView implements TimelineView {
       outState.putParcelable(LIST_STATE_KEY, list.getLayoutManager()
           .onSaveInstanceState());
     }
-  }
-
-  @Nullable @Override
-  public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container,
-      @Nullable Bundle savedInstanceState) {
-    return inflater.inflate(R.layout.fragment_timeline, container, false);
   }
 
   @Override public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
@@ -254,6 +258,7 @@ public class TimelineFragment extends FragmentView implements TimelineView {
         R.color.default_color, R.color.default_progress_bar_color, R.color.default_color);
     coordinatorLayout = view.findViewById(R.id.coordinator_layout);
     floatingActionButton = (FloatingActionButton) view.findViewById(R.id.floating_action_button);
+    StoreRepository storeRepository = RepositoryFactory.getStoreRepository(getContext());
 
     SpannableFactory spannableFactory = new SpannableFactory();
     TimelineAdsRepository timelineAdsRepository = new TimelineAdsRepository(BehaviorRelay.create());
@@ -261,8 +266,8 @@ public class TimelineFragment extends FragmentView implements TimelineView {
     adapter = new PostAdapter(new ArrayList<>(),
         new CardViewHolderFactory(postTouchEventPublishSubject, dateCalculator, spannableFactory,
             new MinimalCardViewFactory(dateCalculator, spannableFactory,
-                postTouchEventPublishSubject), marketName, timelineAdsRepository, storeContext),
-        new ProgressCard());
+                postTouchEventPublishSubject), marketName, timelineAdsRepository, storeContext,
+            storeRepository), new ProgressCard());
     list.setAdapter(adapter);
 
     final StoreAccessor storeAccessor = AccessorFactory.getAccessorFor(
@@ -280,10 +285,13 @@ public class TimelineFragment extends FragmentView implements TimelineView {
     } else {
       timelineUserProvider = new StatsUserProvider(accountManager, timelineService);
     }
+    UpdateRepository updateRepository = RepositoryFactory.getUpdateRepository(getContext(),
+        ((AptoideApplication) getContext().getApplicationContext()).getDefaultSharedPreferences());
 
     Timeline timeline =
         new Timeline(timelineService, installManager, new DownloadFactory(marketName),
-            timelineAnalytics, timelinePostsRepository, marketName, timelineUserProvider);
+            timelineAnalytics, timelinePostsRepository, marketName, timelineUserProvider,
+            updateRepository);
 
     TimelineNavigator timelineNavigation = new TimelineNavigator(getFragmentNavigator(),
         getContext().getString(R.string.timeline_title_likes), tabNavigator, storeContext);
@@ -296,10 +304,9 @@ public class TimelineFragment extends FragmentView implements TimelineView {
     attachPresenter(
         new TimelinePresenter(this, timeline, CrashReport.getInstance(), timelineNavigation,
             new PermissionManager(), (PermissionService) getContext(), installManager,
-            RepositoryFactory.getStoreRepository(getContext()), storeUtilsProxy,
-            storeCredentialsProvider, accountManager, timelineAnalytics, userId, storeId,
-            storeContext, getContext().getResources(), getFragmentNavigator(),
-            new LinksHandlerFactory(getContext()), notificationCenter), savedInstanceState);
+            storeRepository, storeUtilsProxy, storeCredentialsProvider, accountManager,
+            timelineAnalytics, userId, storeId, storeContext, getContext().getResources(),
+            new LinksHandlerFactory(getContext())));
   }
 
   @Override public void onDestroyView() {
@@ -316,6 +323,7 @@ public class TimelineFragment extends FragmentView implements TimelineView {
     helper = null;
     retryButton = null;
     floatingActionButton = null;
+    layoutManager = null;
     bottomAlreadyReached = false;
     timelinePostsRepository.clearLoading();
   }
@@ -545,8 +553,8 @@ public class TimelineFragment extends FragmentView implements TimelineView {
     hideProgressIndicator();
   }
 
-  @Override public void removePost(int postPosition) {
-    adapter.removePost(postPosition);
+  @Override public void removePost(Post post) {
+    adapter.removePost(post);
   }
 
   @Override public Observable<Post> getVisibleItems() {
@@ -589,20 +597,45 @@ public class TimelineFragment extends FragmentView implements TimelineView {
         .map(recyclerViewScrollEvent -> layoutManager.findFirstVisibleItemPosition());
   }
 
+  @Override public Single<String> takeFeedbackScreenShot() {
+    String downloadFolderPath = getContext().getApplicationContext()
+        .getCacheDir()
+        .getPath();
+    String screenshotFileName = getActivity().getClass()
+        .getSimpleName() + ".jpg";
+    AptoideUtils.ScreenU.takeScreenshot(getActivity(), downloadFolderPath, screenshotFileName);
+    return Single.just(downloadFolderPath + screenshotFileName);
+  }
+
+  @Override public void showUserUnsubscribedMessage(String userName) {
+    final String msg =
+        AptoideUtils.StringU.getFormattedString(R.string.timeline_short_unfollow_user,
+            getContext().getResources(), userName);
+    Snackbar.make(getView(), msg, Snackbar.LENGTH_SHORT)
+        .show();
+  }
+
   private void handleSharePreviewAnswer() {
+
+    final ShareEvent[] share = new ShareEvent[1];
     shareDialog.cancels()
-        .doOnNext(shareEvent -> timelineAnalytics.sendShareCompleted(false))
+        .doOnNext(shareEvent -> timelineAnalytics.sendErrorShareCompleted(shareEvent,
+            EventErrorHandler.ShareErrorEvent.CANCELLED))
         .compose(bindUntilEvent(LifecycleEvent.PAUSE))
         .subscribe();
 
     shareDialog.shares()
         .doOnNext(event -> sharePostPublishSubject.onNext(event))
-        .doOnNext(shareEvent -> timelineAnalytics.sendShareCompleted(true))
+        .doOnNext(shareEvent -> {
+          if(shareEvent.getEvent()==ShareEvent.SHARE)
+            timelineAnalytics.sendShareCompleted(shareEvent);
+          else
+            timelineAnalytics.sendErrorShareCompleted(shareEvent, EventErrorHandler.ShareErrorEvent.UNKNOWN_ERROR);
+        })
         .compose(bindUntilEvent(LifecycleEvent.PAUSE))
         .subscribe(shareEvent -> {
         }, throwable -> {
           crashReport.log(throwable);
-          timelineAnalytics.sendShareCompleted(false);
         });
     shareDialog.show();
   }

@@ -146,11 +146,10 @@ public class PartnerApplication extends AptoideApplication {
 
   @Override public NotificationService getPnpV1NotificationService() {
     if (pnpV1NotificationService == null) {
-      final ApplicationPreferences appPreferences = getApplicationPreferences();
       pnpV1NotificationService =
           new PnpV1NotificationService(BuildConfig.APPLICATION_ID, getDefaultClient(),
               WebService.getDefaultConverter(), getIdsRepository(), BuildConfig.VERSION_NAME,
-              appPreferences.getExtraId(), getDefaultSharedPreferences(), getResources(),
+              getExtraId(), getDefaultSharedPreferences(), getResources(),
               getAuthenticationPersistence(), getAccountManager(), getBaseContext(),
               getTokenInvalidator(), getBodyInterceptorV3());
     }

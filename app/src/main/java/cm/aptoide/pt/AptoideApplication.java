@@ -236,6 +236,7 @@ public abstract class AptoideApplication extends Application {
   private AptoideDownloadManager downloadManager;
   private SparseArray<InstallManager> installManagers;
   private OkHttpClient defaultClient;
+  private OkHttpClient notificationsClient;
   private OkHttpClient longTimeoutClient;
   private L2Cache httpClientCache;
   private UserAgentInterceptor userAgentInterceptor;
@@ -585,10 +586,9 @@ public abstract class AptoideApplication extends Application {
   public NotificationService getPnpV1NotificationService() {
     if (pnpV1NotificationService == null) {
       pnpV1NotificationService =
-          new PnpV1NotificationService(BuildConfig.APPLICATION_ID, getDefaultClient(),
+          new PnpV1NotificationService(BuildConfig.APPLICATION_ID, getNotificationsClient(),
               WebService.getDefaultConverter(), getIdsRepository(), BuildConfig.VERSION_NAME,
-              getExtraId(), getDefaultSharedPreferences(), getResources(), getAccountManager(),
-              tokenInvalidator, getBodyInterceptorNotifications());
+              getExtraId(), getDefaultSharedPreferences(), getResources(), getAccountManager());
     }
     return pnpV1NotificationService;
   }
@@ -631,6 +631,20 @@ public abstract class AptoideApplication extends Application {
       defaultClient = okHttpClientBuilder.build();
     }
     return defaultClient;
+  }
+
+  public OkHttpClient getNotificationsClient() {
+    if (notificationsClient == null) {
+      final OkHttpClient.Builder okHttpClientBuilder = new OkHttpClient.Builder();
+      okHttpClientBuilder.readTimeout(45, TimeUnit.SECONDS);
+      okHttpClientBuilder.writeTimeout(45, TimeUnit.SECONDS);
+
+      okHttpClientBuilder.addInterceptor(
+          new BodyInterceptorNotifications(getAuthenticationPersistence(), getTokenInvalidator()));
+
+      notificationsClient = okHttpClientBuilder.build();
+    }
+    return notificationsClient;
   }
 
   public Interceptor getUserAgentInterceptor() {
@@ -1077,14 +1091,6 @@ public abstract class AptoideApplication extends Application {
           new AccountSettingsBodyInterceptorV7(getBodyInterceptorWebV7(), getLocalAdultContent());
     }
     return accountSettingsBodyInterceptorWebV7;
-  }
-
-  public BodyInterceptor<Map<String, String>> getBodyInterceptorNotifications() {
-    if (bodyInterceptorNotifications == null) {
-      bodyInterceptorNotifications =
-          new BodyInterceptorNotifications(getAuthenticationPersistence());
-    }
-    return bodyInterceptorNotifications;
   }
 
   public BodyInterceptor<cm.aptoide.pt.dataprovider.ws.v3.BaseBody> getBodyInterceptorV3() {

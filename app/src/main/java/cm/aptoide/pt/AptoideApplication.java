@@ -106,6 +106,7 @@ import cm.aptoide.pt.link.LinksHandlerFactory;
 import cm.aptoide.pt.logger.Logger;
 import cm.aptoide.pt.navigator.Result;
 import cm.aptoide.pt.networking.AuthenticationPersistence;
+import cm.aptoide.pt.networking.BodyInterceptorNotifications;
 import cm.aptoide.pt.networking.BodyInterceptorV3;
 import cm.aptoide.pt.networking.BodyInterceptorV7;
 import cm.aptoide.pt.networking.Cdn;
@@ -282,6 +283,7 @@ public abstract class AptoideApplication extends Application {
   private Adyen adyen;
   private PurchaseFactory purchaseFactory;
   private AppCenter appCenter;
+  private BodyInterceptorNotifications bodyInterceptorNotifications;
   private ReadPostsPersistence readPostsPersistence;
 
   public static FragmentProvider getFragmentProvider() {
@@ -585,8 +587,8 @@ public abstract class AptoideApplication extends Application {
       pnpV1NotificationService =
           new PnpV1NotificationService(BuildConfig.APPLICATION_ID, getDefaultClient(),
               WebService.getDefaultConverter(), getIdsRepository(), BuildConfig.VERSION_NAME,
-              getExtraId(), getDefaultSharedPreferences(), getResources(),
-              getAuthenticationPersistence(), getAccountManager());
+              getExtraId(), getDefaultSharedPreferences(), getResources(), getAccountManager(),
+              tokenInvalidator, getBodyInterceptorNotifications());
     }
     return pnpV1NotificationService;
   }
@@ -1075,6 +1077,14 @@ public abstract class AptoideApplication extends Application {
           new AccountSettingsBodyInterceptorV7(getBodyInterceptorWebV7(), getLocalAdultContent());
     }
     return accountSettingsBodyInterceptorWebV7;
+  }
+
+  public BodyInterceptor<Map<String, String>> getBodyInterceptorNotifications() {
+    if (bodyInterceptorNotifications == null) {
+      bodyInterceptorNotifications =
+          new BodyInterceptorNotifications(getAuthenticationPersistence());
+    }
+    return bodyInterceptorNotifications;
   }
 
   public BodyInterceptor<cm.aptoide.pt.dataprovider.ws.v3.BaseBody> getBodyInterceptorV3() {

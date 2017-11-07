@@ -586,9 +586,10 @@ public abstract class AptoideApplication extends Application {
   public NotificationService getPnpV1NotificationService() {
     if (pnpV1NotificationService == null) {
       pnpV1NotificationService =
-          new PnpV1NotificationService(BuildConfig.APPLICATION_ID, getNotificationsClient(),
-              WebService.getDefaultConverter(), getIdsRepository(), BuildConfig.VERSION_NAME,
-              getExtraId(), getDefaultSharedPreferences(), getResources(), getAccountManager());
+          new PnpV1NotificationService(BuildConfig.APPLICATION_ID, getDefaultClient(),
+              getAuthenticationClient(), WebService.getDefaultConverter(), getIdsRepository(),
+              BuildConfig.VERSION_NAME, getExtraId(), getDefaultSharedPreferences(), getResources(),
+              getAccountManager());
     }
     return pnpV1NotificationService;
   }
@@ -633,7 +634,7 @@ public abstract class AptoideApplication extends Application {
     return defaultClient;
   }
 
-  public OkHttpClient getNotificationsClient() {
+  public OkHttpClient getAuthenticationClient() {
     if (notificationsClient == null) {
       final OkHttpClient.Builder okHttpClientBuilder = new OkHttpClient.Builder();
       okHttpClientBuilder.readTimeout(45, TimeUnit.SECONDS);

@@ -16,6 +16,7 @@ import rx.Single;
 public class PnpV1NotificationService implements NotificationService {
   private final String applicationId;
   private final OkHttpClient httpClient;
+  private final OkHttpClient authenticationClient;
   private final Converter.Factory converterFactory;
   private final IdsRepository idsRepository;
   private final String versionName;
@@ -25,11 +26,13 @@ public class PnpV1NotificationService implements NotificationService {
   private final Resources resources;
 
   public PnpV1NotificationService(String applicationId, OkHttpClient httpClient,
-      Converter.Factory converterFactory, IdsRepository idsRepository, String versionName,
-      String extraId, SharedPreferences sharedPreferences, Resources resources,
+      OkHttpClient authenticationClient, Converter.Factory converterFactory,
+      IdsRepository idsRepository, String versionName, String extraId,
+      SharedPreferences sharedPreferences, Resources resources,
       AptoideAccountManager accountManager) {
     this.applicationId = applicationId;
     this.httpClient = httpClient;
+    this.authenticationClient = authenticationClient;
     this.converterFactory = converterFactory;
     this.idsRepository = idsRepository;
     this.versionName = versionName;
@@ -43,8 +46,8 @@ public class PnpV1NotificationService implements NotificationService {
     return accountManager.accountStatus()
         .first()
         .flatMap(account -> PullSocialNotificationRequest.of(idsRepository.getUniqueIdentifier(),
-            versionName, applicationId, httpClient, converterFactory, extraId, sharedPreferences,
-            resources, account.isLoggedIn())
+            versionName, applicationId, authenticationClient, converterFactory, extraId,
+            sharedPreferences, resources, account.isLoggedIn())
             .observe())
         .flatMap(response -> accountManager.accountStatus()
             .first()

@@ -16,6 +16,8 @@ import cm.aptoide.pt.view.ActivityProvider;
 import cm.aptoide.pt.view.FragmentProvider;
 import cm.aptoide.pt.view.configuration.implementation.PartnerActivityProvider;
 import cm.aptoide.pt.view.configuration.implementation.PartnerFragmentProvider;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import rx.Completable;
 import rx.Single;
 
@@ -25,19 +27,28 @@ public class PartnerApplication extends AptoideApplication {
   private NotificationCenter notificationCenter;
   private PushNotificationSyncManager pushNotificationSyncManager;
   private NotificationService pnpV1NotificationService;
+  private ObjectMapper objectMapper;
 
   public void setRemoteBootConfig(RemoteBootConfig remoteBootConfig) {
     BootConfigJSONUtils.saveRemoteBootConfig(getBaseContext(), remoteBootConfig,
-        "support@aptoide.com");
+        "support@aptoide.com", getObjectMapper());
     setBootConfig(remoteBootConfig.getData());
   }
 
   public BootConfig getBootConfig() {
     if (bootConfig == null) {
-      bootConfig = BootConfigJSONUtils.getSavedRemoteBootConfig(getBaseContext())
+      bootConfig = BootConfigJSONUtils.getSavedRemoteBootConfig(getBaseContext(), getObjectMapper())
           .getData();
     }
     return bootConfig;
+  }
+
+  private ObjectMapper getObjectMapper() {
+    if (objectMapper == null) {
+      objectMapper =
+          new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
+    return objectMapper;
   }
 
   public void setBootConfig(BootConfig bootConfig) {

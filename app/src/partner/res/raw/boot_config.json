@@ -19,6 +19,7 @@
       "appearance": {
         "theme": "black",
         "splash": {
+          "enable": true,
           "portrait": "http://pool.img.aptoide.com/imgs/3c23aa6b2759042d2297528bcf5d5c3f_splashscreen_portrait.jpg",
           "landscape": "http://pool.img.aptoide.com/imgs/d174c8fcca8e78a92293ca97bea3129a_splashscreen_landscape.jpg",
           "timeout": 3
